@@ -27,26 +27,18 @@ readBAM <- function(bamFile){
 
 get_annotation <- function(gff){
   # Annotation of positive string
-  genes_start_positive <- c()
-  genes_end_positive <- c()
-  genes_start_positive <- gff[,4]
-  genes_end_positive <- gff[,5]
-  genes_start_positive <- genes_start_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')]
-  genes_end_positive <- genes_end_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')]
+  genes_start_positive <- c(); genes_start_positive <- gff[,4]; genes_start_positive <- genes_start_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')];
+  genes_end_positive <- c(); genes_end_positive <- gff[,5]; genes_end_positive <- genes_end_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')];
   
   # Annotation of negative string
-  genes_start_negative <- c()
-  genes_end_negative <- c()
-  genes_start_negative <- gff[,4]
-  genes_end_negative <- gff[,5]
-  genes_start_negative <- genes_start_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
-  genes_end_negative <- genes_end_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
+  genes_start_negative <- c(); genes_start_negative <- gff[,4]; genes_start_negative <- genes_start_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
+  genes_end_negative <- c(); genes_end_negative <- gff[,5]; genes_end_negative <- genes_end_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
   
   return(list("genes_start_positive" = genes_start_positive, "genes_end_positive" = genes_end_positive, "genes_start_negative" = genes_start_negative, "genes_end_negative" = genes_end_negative))
 }
 
 
-preparing_of_reads <- function(filename, type_of_data){
+preparing_signals_from_reads <- function(length_of_genome, filename, type_of_data){
   # Load the BAM file
   BAM <- readBAM(filename)
   
@@ -81,7 +73,22 @@ preparing_of_reads <- function(filename, type_of_data){
     pos_negative <- pos[strand == '+']
     qwidth_negative <- qwidth[strand == '+']
   }
-  return(list("pos_positive" = pos_positive, "qwidth_positive" = qwidth_positive, "pos_negative" = pos_negative, "qwidth_negative" = qwidth_negative))
+  
+  # Signal of coverage for positive string
+  signal_positive <- rep(0, length_of_genome)
+  for (i in 1:length(pos_positive)){
+    signal_positive[(pos_positive[i]):(pos_positive[i]+qwidth_positive[i]-1)] <- signal_positive[(pos_positive[i]):(pos_positive[i]+qwidth_positive[i]-1)] + rep(1, qwidth_positive[i])
+  }
+  signal_positive <- signal_positive[1:length_of_genome]
+  
+  # Signal of coverage for negative string
+  signal_negative <- rep(0, length_of_genome)
+  for (i in 1:length(pos_negative)){
+    signal_negative[(pos_negative[i]):(pos_negative[i]+qwidth_negative[i]-1)] <- signal_negative[(pos_negative[i]):(pos_negative[i]+qwidth_negative[i]-1)] + rep(1, qwidth_negative[i])
+  }
+  signal_negative <- signal_negative[1:length_of_genome]
+  
+  return(list("signal_positive" = signal_positive, "signal_negative" = signal_negative))
 }
 
 search_transcripts <- function(signal, length_of_genome, annotation_genes_start, annotation_genes_end, coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_transcripts){
@@ -336,7 +343,6 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
 }
 
 
-
 search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_transcripts_user, min_length_of_sRNA_user, type_of_data, threshold_coverage_steepness_user, threshold_coverage_min_user, threshold_gap_transcripts_user){
   
   # Length of genome from FASTA file
@@ -350,21 +356,10 @@ search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_transcripts_use
     filename <- bamfiles[i]
     
     # Get reads from BAM
-    reads <- preparing_of_reads(filename, type_of_data) 
+    signals <- preparing_signals_from_reads(length_of_genome, filename, type_of_data)
     
-    # Signal of coverage for positive string
-    signal_positive <- rep(0, length_of_genome)
-    for (i in 1:length(reads[["pos_positive"]])){
-      signal_positive[(reads[["pos_positive"]][i]):(reads[["pos_positive"]][i]+reads[["qwidth_positive"]][i]-1)] <- signal_positive[(reads[["pos_positive"]][i]):(reads[["pos_positive"]][i]+reads[["qwidth_positive"]][i]-1)] + rep(1, reads[["qwidth_positive"]][i])
-    }
-    signal_positive <- signal_positive[1:length_of_genome]
-    
-    # Signal of coverage for negative string
-    signal_negative <- rep(0, length_of_genome)
-    for (i in 1:length(reads[["pos_negative"]])){
-      signal_negative[(reads[["pos_negative"]][i]):(reads[["pos_negative"]][i]+reads[["qwidth_negative"]][i]-1)] <- signal_negative[(reads[["pos_negative"]][i]):(reads[["pos_negative"]][i]+reads[["qwidth_negative"]][i]-1)] + rep(1, reads[["qwidth_negative"]][i])
-    }
-    signal_negative <- signal_negative[1:length_of_genome]
+    signal_positive <- signals[["signal_positive"]]
+    signal_negative <- signals[["signal_negative"]]
     
     # Coverage of reads
     coverage_signal <- (sum(signal_positive)+sum(signal_negative))/(2*length_of_genome)
@@ -413,28 +408,23 @@ search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_transcripts_use
     
     # Exporting the results to CSV 
     exporting_CSV(filename, gff, positive_transcripts[["start_index"]], positive_transcripts[["end_index"]], positive_transcripts[["length_of_transcripts"]], positive_transcripts[["mean_coverage_transcripts"]], negative_transcripts[["start_index"]], negative_transcripts[["end_index"]], negative_transcripts[["length_of_transcripts"]], negative_transcripts[["mean_coverage_transcripts"]])
-    exporting_signals_TXT(filename, length_of_genome, positive_transcripts, negative_transcripts)
+    exporting_signals_TXT(filename, '_positive_sRNA.txt', length_of_genome, positive_transcripts)
+    exporting_signals_TXT(filename, '_negative_sRNA.txt', length_of_genome, negative_transcripts)
   }
 }
 
-exporting_signals_TXT <- function(filename, length_of_genome, positive_transcripts, negative_transcripts){
+exporting_signals_TXT <- function(filename, name_strand, length_of_genome, transcripts){
   
-  transkript_signal_positive <- rep(0, length_of_genome)
-  for (k in 1:length(positive_transcripts[["start_index"]])){
-    transkript_signal_positive[positive_transcripts[["start_index"]][k]:positive_transcripts[["end_index"]][k]] <- 1
-  }
+  transkript_signal <- rep(0, length_of_genome)
   
-  transkript_signal_negative <- rep(0, length_of_genome)
-  for (k in 1:length(negative_transcripts[["start_index"]])){
-    transkript_signal_negative[negative_transcripts[["start_index"]][k]:negative_transcripts[["end_index"]][k]] <- 1
+  for (k in 1:length(transcripts[["start_index"]])){
+    transkript_signal[transcripts[["start_index"]][k]:transcripts[["end_index"]][k]] <- 1
   }
   
   name <- strsplit(filename, split = ""); name <- (name[[1]]); name <- name[1:(length(name)-4)]; name <- paste(name, collapse='')
-  nameP <- paste(name, '_positive_sRNA.txt', sep = '')
-  nameN <- paste(name, '_negative_sRNA.txt', sep = '')
+  name <- paste(name, name_strand, sep = '')
   
-  write.table(transkript_signal_positive, file = nameP, sep = '', row.names = FALSE, col.names = FALSE)
-  write.table(transkript_signal_negative, file = nameN, sep = '', row.names = FALSE, col.names = FALSE)
+  write.table(transkript_signal, file = name, sep = '', row.names = FALSE, col.names = FALSE)
 }
 
 exporting_CSV <- function(filename, gff, start_index_positive, end_index_positive, length_of_transcripts_positive, mean_coverage_transcripts_positive, start_index_negative, end_index_negative, length_of_transcripts_negative, mean_coverage_transcripts_negative){

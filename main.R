@@ -30,4 +30,3 @@ bamfiles <- dir('.', 'bam$')
 
 #Function for search sRNA
 search_sRNA(bamfiles, gff, fasta, threshold_coverage_transcripts_user, min_length_of_sRNA_user, type_of_data, threshold_coverage_steepness_user, threshold_coverage_min_user, threshold_gap_transcripts_user)
-
