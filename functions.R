@@ -99,14 +99,15 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   threshold_low <- threshold_coverage_min
   for (k in 1:(length_of_genome-29)){
     if((signal[k+29]-signal[k]) > threshold_coverage_steepness){
-      if((signal[k+29] < threshold_high) & (signal[k] > threshold_low)){
+      if((signal[k+29] < threshold_high) & (max(signal[k:k+29]) > threshold_low)){
         a <- signal[k:(k+29)]
-        a[a == 0] <- Inf
+        a[a < (threshold_coverage_min+1)] <- Inf
         position <- which(a == (min(a)))
         position <- position[1]
         position_start[k+position-1] <- 1
         threshold_high <- threshold_coverage_min
         threshold_low <- threshold_coverage_min
+        k <- k+29
       }
     }
     if(signal[k]  < threshold_low){
@@ -121,9 +122,9 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   threshold_low <- threshold_coverage_min
   for (k in (length_of_genome:30)){
     if((signal[k-29]-signal[k]) > threshold_coverage_steepness){
-      if((signal[k-29] < threshold_high) & (signal[k] > threshold_low)){
+      if((signal[k-29] < threshold_high) & (max(signal[(k-29):k]) > threshold_low)){
         a <- signal[(k-29):k]
-        a[a == 0] <- Inf
+        a[a < (threshold_coverage_min+1)] <- Inf
         position <- which(a == (min(a)))
         position <- position[length(position)]
         position_end[k-30+position] <- 1
@@ -288,13 +289,13 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   start_index_clear <- start_index
   end_index_clear <- end_index
   for(k in 1:(length(start_index)-1)){
-    if(((start_index[k+1] - end_index[k]) < 20)){
+    if(((start_index[k+1] - end_index[k]) < 21)){
       end_index_clear[k] <- 0
       start_index_clear[k+1] <-0
     }
     else if((abs(mean_coverage_transcripts[k+1]-mean_coverage_transcripts[k]) > coverage_signal)){
       next
-    }else if(((start_index[k+1] - end_index[k]) < threshold_gap_transcripts)){
+    }else if(((start_index[k+1] - end_index[k]) < (threshold_gap_transcripts+1))){
       end_index_clear[k] <- 0
       start_index_clear[k+1] <-0
     }
@@ -303,7 +304,6 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   end_index <- end_index[end_index_clear != 0]
   
   rm(list = c('start_index_clear', 'end_index_clear', 'k', 'i'))
-  
   
   # Deleting of potential transcripts by minimal length of searched sRNA
   length_of_transcripts <- end_index - start_index + 1
