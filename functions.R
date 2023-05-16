@@ -91,7 +91,7 @@ preparing_signals_from_reads <- function(length_of_genome, filename, type_of_dat
   return(list("signal_positive" = signal_positive, "signal_negative" = signal_negative))
 }
 
-search_transcripts <- function(signal, length_of_genome, annotation_genes_start, annotation_genes_end, coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_transcripts){
+search_transcripts <- function(signal, length_of_genome, annotation_genes_start, annotation_genes_end, coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA){
   ## Searching for 5' and 3' potential ends of transcripts
   # 5' ends
   position_start <- rep(0, length_of_genome)
@@ -292,7 +292,7 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
       end_index_clear[k] <- 0
       start_index_clear[k+1] <-0
     }
-    else if((abs(mean_coverage_transcripts[k+1]-mean_coverage_transcripts[k]) > 0.5*coverage_signal)){
+    else if((abs(mean_coverage_transcripts[k+1]-mean_coverage_transcripts[k]) > coverage_signal)){
       next
     }else if(((start_index[k+1] - end_index[k]) < threshold_gap_transcripts)){
       end_index_clear[k] <- 0
@@ -327,9 +327,9 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   for (i in 1:length(start_index)){
     mean_coverage_transcripts[i] <- mean(signal[start_index[i]:end_index[i]])
   }
-  start_index[mean_coverage_transcripts < threshold_coverage_transcripts] <- 0
-  end_index[mean_coverage_transcripts < threshold_coverage_transcripts] <- 0
-  mean_coverage_transcripts[mean_coverage_transcripts < threshold_coverage_transcripts] <- 0
+  start_index[mean_coverage_transcripts < threshold_coverage_sRNA] <- 0
+  end_index[mean_coverage_transcripts < threshold_coverage_sRNA] <- 0
+  mean_coverage_transcripts[mean_coverage_transcripts < threshold_coverage_sRNA] <- 0
   start_index <- start_index[start_index != 0]
   end_index <- end_index[end_index != 0]
   mean_coverage_transcripts <- round(mean_coverage_transcripts[mean_coverage_transcripts != 0])
@@ -343,7 +343,7 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
 }
 
 
-search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_transcripts_user, min_length_of_sRNA_user, type_of_data, threshold_coverage_steepness_user, threshold_coverage_min_user, threshold_gap_transcripts_user){
+search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_sRNA_user, min_length_of_sRNA_user, type_of_data, threshold_coverage_steepness_user, threshold_coverage_min_user, threshold_gap_transcripts_user){
   
   # Length of genome from FASTA file
   length_of_genome <- length(fasta[[1]])
@@ -361,56 +361,75 @@ search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_transcripts_use
     signal_positive <- signals[["signal_positive"]]
     signal_negative <- signals[["signal_negative"]]
     
-    # Coverage of reads
+    # Coverage of reads from BAM
     coverage_signal <- (sum(signal_positive)+sum(signal_negative))/(2*length_of_genome)
     
     ## SETTING THE PARAMETERS
     # Setting threshold of steepness coverage
     if(is.null(threshold_coverage_steepness_user)){
-      threshold_coverage_steepness <- (((-2/700)*coverage_signal) + (195/700))*coverage_signal
+      if(coverage_signal < 10){
+        threshold_coverage_steepness <- 2
+      }else if(coverage_signal > 100){
+        threshold_coverage_steepness <- 0.05*coverage_signal
+      }else{
+        threshold_coverage_steepness <- (((1/30)*coverage_signal)+(5/3))
+      }
     }else{
       threshold_coverage_steepness <- threshold_coverage_steepness_user
     }
     
     # Setting threshold of minimal coverage
     if(is.null(threshold_coverage_min_user)){
-      threshold_coverage_min <- ((-(1/600)*coverage_signal) + (13/60))*coverage_signal
+      if(coverage_signal < 10){
+        threshold_coverage_min <- 1
+      }else if(coverage_signal > 100){
+        threshold_coverage_min <- 0.05*coverage_signal
+      }else{
+        threshold_coverage_min <- (((2/45)*coverage_signal)+(5/9))
+      }
     }else{
       threshold_coverage_min <- threshold_coverage_min_user
     }
     
     # Setting threshold of gap between transcripts
     if(is.null(threshold_gap_transcripts_user)){
-      threshold_gap_transcripts <- ((-10/7)*coverage_signal)+151
+      if(coverage_signal < 10){
+        threshold_gap_transcripts <- 150
+      }else if(coverage_signal > 100){
+        threshold_gap_transcripts <- 50
+      }else{
+        threshold_gap_transcripts <- ((-(10/9)*coverage_signal)+(1450/9))
+      }
     }else{
       threshold_gap_transcripts <- threshold_gap_transcripts_user
     }
     
     # Setting threshold of minimum coverage of final sRNA
-    if(is.null(threshold_coverage_transcripts_user)){
-      threshold_coverage_transcripts <- Inf
+    if(is.null(threshold_coverage_sRNA_user)){
+      threshold_coverage_sRNA <- Inf
     }else{
-      threshold_coverage_transcripts <- threshold_coverage_transcripts_user
+      threshold_coverage_sRNA <- threshold_coverage_sRNA_user
     }
     
     # Setting threshold of minimum length of final sRNA
     if(is.null(min_length_of_sRNA_user)){
-      min_length_of_sRNA <- 50
+      min_length_of_sRNA <- 40
     }else{
       min_length_of_sRNA <- min_length_of_sRNA_user
     }
     
     # Searching for sRNA transcripts on positive strand
-    positive_transcripts <- search_transcripts(signal_positive, length_of_genome, annotation_genes[["genes_start_positive"]], annotation_genes[["genes_end_positive"]], coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_transcripts)
+    positive_transcripts <- search_transcripts(signal_positive, length_of_genome, annotation_genes[["genes_start_positive"]], annotation_genes[["genes_end_positive"]], coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA)
     
     # Searching for sRNA transcripts on negative strand
-    negative_transcripts <- search_transcripts(signal_negative, length_of_genome, annotation_genes[["genes_start_negative"]], annotation_genes[["genes_end_negative"]], coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_transcripts)
+    negative_transcripts <- search_transcripts(signal_negative, length_of_genome, annotation_genes[["genes_start_negative"]], annotation_genes[["genes_end_negative"]], coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA)
     
     # Exporting the results to CSV 
-    exporting_CSV(filename, gff, positive_transcripts[["start_index"]], positive_transcripts[["end_index"]], positive_transcripts[["length_of_transcripts"]], positive_transcripts[["mean_coverage_transcripts"]], negative_transcripts[["start_index"]], negative_transcripts[["end_index"]], negative_transcripts[["length_of_transcripts"]], negative_transcripts[["mean_coverage_transcripts"]])
+    
     exporting_signals_TXT(filename, '_positive_sRNA.txt', length_of_genome, positive_transcripts)
     exporting_signals_TXT(filename, '_negative_sRNA.txt', length_of_genome, negative_transcripts)
-  }
+    exporting_CSV(filename, gff, positive_transcripts, negative_transcripts)
+    }
 }
 
 exporting_signals_TXT <- function(filename, name_strand, length_of_genome, transcripts){
@@ -427,7 +446,16 @@ exporting_signals_TXT <- function(filename, name_strand, length_of_genome, trans
   write.table(transkript_signal, file = name, sep = '', row.names = FALSE, col.names = FALSE)
 }
 
-exporting_CSV <- function(filename, gff, start_index_positive, end_index_positive, length_of_transcripts_positive, mean_coverage_transcripts_positive, start_index_negative, end_index_negative, length_of_transcripts_negative, mean_coverage_transcripts_negative){
+exporting_CSV <- function(filename, gff, positive_transcripts, negative_transcripts){
+  start_index_positive <- positive_transcripts[["start_index"]]
+  end_index_positive <- positive_transcripts[["end_index"]]
+  length_of_transcripts_positive <- positive_transcripts[["length_of_transcripts"]]
+  mean_coverage_transcripts_positive <- positive_transcripts[["mean_coverage_transcripts"]]
+  
+  start_index_negative <- negative_transcripts[["start_index"]]
+  end_index_negative <- negative_transcripts[["end_index"]]
+  length_of_transcripts_negative <- negative_transcripts[["length_of_transcripts"]]
+  mean_coverage_transcripts_negative <- negative_transcripts[["mean_coverage_transcripts"]]
   
   data <- data.frame(matrix(nrow = 0, ncol = 7))
   columns = c('start', 'stop', 'length', 'strand', 'mean_coverage', 'type', 'gene')
