@@ -1,2 +1,2 @@
-# DP_sRNA_searching
+# SEARCHsRNA
  Tool for searching bacterial sRNA.
