@@ -27,12 +27,12 @@ readBAM <- function(bamFile){
 
 get_annotation <- function(gff){
   # Annotation of positive string
-  genes_start_positive <- c(); genes_start_positive <- gff[,4]; genes_start_positive <- genes_start_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')];
-  genes_end_positive <- c(); genes_end_positive <- gff[,5]; genes_end_positive <- genes_end_positive[(gff[,3] == 'CDS') & (gff[,7] == '+')];
+  genes_start_positive <- c(); genes_start_positive <- gff[,4]; genes_start_positive <- genes_start_positive[(gff[,3] == 'gene') & (gff[,7] == '+')];
+  genes_end_positive <- c(); genes_end_positive <- gff[,5]; genes_end_positive <- genes_end_positive[(gff[,3] == 'gene') & (gff[,7] == '+')];
   
   # Annotation of negative string
-  genes_start_negative <- c(); genes_start_negative <- gff[,4]; genes_start_negative <- genes_start_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
-  genes_end_negative <- c(); genes_end_negative <- gff[,5]; genes_end_negative <- genes_end_negative[(gff[,3] == 'CDS') & (gff[,7] == '-')]
+  genes_start_negative <- c(); genes_start_negative <- gff[,4]; genes_start_negative <- genes_start_negative[(gff[,3] == 'gene') & (gff[,7] == '-')]
+  genes_end_negative <- c(); genes_end_negative <- gff[,5]; genes_end_negative <- genes_end_negative[(gff[,3] == 'gene') & (gff[,7] == '-')]
   
   return(list("genes_start_positive" = genes_start_positive, "genes_end_positive" = genes_end_positive, "genes_start_negative" = genes_start_negative, "genes_end_negative" = genes_end_negative))
 }
@@ -470,10 +470,10 @@ exporting_CSV <- function(filename, gff, positive_transcripts, negative_transcri
   for(k in 1:length(start_index_positive)){
     list <- genes_negative[((((genes_negative[,4]-1) < start_index_positive[k]) & ((genes_negative[,5]+1) > start_index_positive[k])) | (((genes_negative[,4]-1) < end_index_positive[k]) & ((genes_negative[,5]+1) > end_index_positive[k]))) | ((genes_negative[,4] > start_index_positive[k] & ((genes_negative[,4]) < end_index_positive[k])) | (genes_negative[,5] > start_index_positive[k] & ((genes_negative[,5]) < end_index_positive[k]))),9]
     if(isEmpty(list)){
-      type <- 'cis-sRNA'
+      type <- 'trans-sRNA'
       gene <- '-'
     }else{
-      type <- 'trans-sRNA'
+      type <- 'cis-sRNA'
       gene <- list[1]
     }
     new_row <- c(start_index_positive[k], end_index_positive[k], length_of_transcripts_positive[k], '+', mean_coverage_transcripts_positive[k], type, gene)
@@ -484,10 +484,10 @@ exporting_CSV <- function(filename, gff, positive_transcripts, negative_transcri
   for(k in 1:length(start_index_negative)){
     list <- genes_positive[((((genes_positive[,4]-1) < start_index_negative[k]) & ((genes_positive[,5]+1) > start_index_negative[k])) | (((genes_positive[,4]-1) < end_index_negative[k]) & ((genes_positive[,5]+1) > end_index_negative[k]))) | ((genes_positive[,4] > start_index_negative[k] & ((genes_positive[,4]) < end_index_negative[k])) | (genes_positive[,5] > start_index_negative[k] & ((genes_positive[,5]) < end_index_negative[k]))),9]
     if(isEmpty(list)){
-      type <- 'cis-sRNA'
+      type <- 'trans-sRNA'
       gene <- '-'
     }else{
-      type <- 'trans-sRNA'
+      type <- 'cis-sRNA'
       gene <- list[1]
     }
     new_row <- c(start_index_negative[k], end_index_negative[k], length_of_transcripts_negative[k], '-', mean_coverage_transcripts_negative[k], type, gene)
