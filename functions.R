@@ -67,7 +67,7 @@ preparing_signals_from_reads <- function(length_of_genome, filename, type_of_dat
     qwidth_positive <- qwidth[strand == '+']
     pos_negative <- pos[strand == '-']
     qwidth_negative <- qwidth[strand == '-']
-  }else if(type_of_data == 'ReverseStranded'){
+  }else if(type_of_data == 'ReverslyStranded'){
     pos_positive <- pos[strand == '-']
     qwidth_positive <- qwidth[strand == '-']
     pos_negative <- pos[strand == '+']
@@ -144,97 +144,70 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   position_start_end <- position_start
   position_start_end[position_end == 1] <- 2
   pamet <- 0
-  for (k in 1:(length_of_genome)){
-    if ((pamet == 1) & (position_start_end[k] == 1)){
-      index_of_start_2 <- k
-      s <- 0
-      e <- k+1
-      while(s == 0){
-        if(position_start_end[e] == 2){
-          index_of_end <- e
-          s <- 2
-        }else{
-          e <- e+1
-        }
+  for(k in 1:length_of_genome){
+    if((pamet == 0) & (position_start_end[k] == 0)){
+      next
+    }else if((pamet == 0) & (position_start_end[k] == 1)){
+      if(k == length_of_genome){
+        position_start_end[k] <- 0
+        next
+      }else if((2 %in% (position_start_end[(k+1):length_of_genome])) == TRUE){
+        pamet <- 1
+        index_of_start_1 <- k
+      }else{
+        position_start_end[k] <- 0
       }
-      is_null_1 <- min(signal[index_of_start_1:index_of_end])
-      if(is_null_1 < 0.5*threshold_coverage_min){
+    }else if((pamet == 1) & (position_start_end[k] == 1)){
+      index_of_start_2 <- k
+      index_of_end <- which((position_start_end[(k+1):length_of_genome]) == 2)
+      index_of_end <- index_of_end[1]
+      if((min(signal[index_of_start_1:index_of_end])) < threshold_coverage_min){
         position_start_end[index_of_start_1] <- 0
         index_of_start_1 <- index_of_start_2
       }else{
         position_start_end[index_of_start_2] <- 0
-      }
-    }else if((pamet == 0) & (position_start_end[k] == 1)){
-      p <- 0
-      p2 <- k+1
-      while((p == 0) & (p2 < (length_of_genome+1))){
-        if(position_start_end[p2] == 2){
-          pamet <- 1
-          index_of_start_1 <- k
-          p <- 1
-        }else if(p2 == length_of_genome){
-          position_start_end[k] <- 0
-          p2 <- p2+1
-        }else{
-          p2 <- p2+1
-        }
-      }
-      if(k == length_of_genome){
-        position_start_end[k] <- 0
       }
     }else if((pamet == 1) & (position_start_end[k] == 2)){
       pamet <- 0
     }
   }
   
+  
   pamet <- 0
-  for (k in (length_of_genome:1)){
-    if ((pamet == 2) & (position_start_end[k] == 2)){
-      index_of_end_2 <- k
-      s <- 0
-      e <- k-1
-      while(s == 0){
-        if(position_start_end[e] == 1){
-          index_of_start <- e
-          s <- 2
-        }else{
-          e <- e-1
-        }
-      }
-      is_null_1 <- min(signal[index_of_start:index_of_end_1])
-      if(is_null_1 < 0.5*threshold_coverage_min){
-        position_start_end[index_of_end_1] <- 0
-        index_of_end_1 <- index_of_end_2
-      }else{
-        position_start_end[index_of_end_2] <- 0
-      }
+  for(k in length_of_genome:1){
+    if((pamet == 0) & (position_start_end[k] == 0)){
+      next
     }else if((pamet == 0) & (position_start_end[k] == 2)){
-      p <- 0
-      p2 <- k-1
-      while((p == 0) & (p2 > 0)){
-        if(position_start_end[p2] == 1){
-          pamet <- 2
-          index_of_end_1 <- k
-          p <- 1
-        }else if(p2 == 1){
-          position_start_end[k] <- 0
-          p2 <- p2-1
-        }else{
-          p2 <- p2-1
-        }
-      }
       if(k == 1){
         position_start_end[k] <- 0
+        next
+      }else if((1 %in% (position_start_end[1:(k-1)])) == TRUE){
+        pamet <- 2
+        index_of_start_1 <- k
+      }else{
+        position_start_end[k] <- 0
+      }
+    }else if((pamet == 2) & (position_start_end[k] == 2)){
+      index_of_start_2 <- k
+      index_of_end <- which((position_start_end[1:(k-1)]) == 1)
+      index_of_end <- tail(index_of_end, n=1)
+      if((min(signal[index_of_end:index_of_start_1])) < threshold_coverage_min){
+        position_start_end[index_of_start_1] <- 0
+        index_of_start_1 <- index_of_start_2
+      }else{
+        position_start_end[index_of_start_2] <- 0
       }
     }else if((pamet == 2) & (position_start_end[k] == 1)){
       pamet <- 0
     }
   }
   
-  position_start <- position_start * position_start_end
-  position_end <- (position_end * position_start_end)/2
+  position_start <- integer(length_of_genome)
+  position_end <- integer(length_of_genome)
+  position_start[position_start_end == 1] <- 1
+  position_end[position_start_end == 2] <- 1
   
-  rm(list = c('p','p2','pamet', 'index_of_end_1', 'index_of_end_2', 'e', 's', 'index_of_start', 'index_of_start_1', 'index_of_start_2', 'index_of_end', 'is_null_1', 'position_start_end'))
+  rm(list = c('pamet', 'index_of_end', 'index_of_start_1', 'index_of_start_2', 'position_start_end'))
   
   # Extension of 3' and 5' ends in both directions
   start_index <- c()
@@ -343,7 +316,25 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
 }
 
 
-search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_sRNA_user, min_length_of_sRNA_user, type_of_data, threshold_coverage_steepness_user, threshold_coverage_min_user, threshold_gap_transcripts_user){
+search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_coverage_sRNA_user = NULL, min_length_of_sRNA_user = NULL, threshold_coverage_steepness_user = NULL, threshold_coverage_min_user = NULL, threshold_gap_transcripts_user = NULL){
+  #### Parameters of function search_sRNA:
+  # type_of_data:                           'Stranded' for stranded BAM data/ 'ReverslyStranded' for Reversly stranded BAM data
+  # threshold_coverage_sRNA_user             Set this value [] as the minimum coverage requirement of the resulting sRNAs
+  # min_length_of_sRNA_user                  Set this value [pb] as the minimum length requirement of the resulting sRNAs
+  # threshold_coverage_steepness_user        NULL #Set this value [number of reads] to set the value to detect changes in coverage and find transcripts (a higher value searches only for transcripts with high steepness coverage between  the 5'/3' ends and introns)
+  # threshold_coverage_min_user              Set this value [number of minimal alignment reads] to set the value of minimum coverage for 3' and 5' ends (a higher value searches only the 5' and 3' ends with higher coverage)
+  # threshold_gap_transcripts_user           Set this value [pb] to determine the minimum gap that is allowed between 2 transcripts (if the gap is smaller, the transcripts will be joined together)
+  
+  setwd(path_of_files)
+  
+  # Loading of reference - fasta
+  fastafile <- dir('.', 'fasta$'); fasta <- read.fasta(fastafile); rm(fastafile);
+  
+  #Loading of annotation - gff3
+  gfffile <- dir('.', 'gff3$'); gff <- read.table(gfffile, sep='\t', quote=''); rm(gfffile);
+  
+  ## Look for all files in the current directory that end with 'bam'
+  bamfiles <- dir('.', 'bam$')
   
   # Length of genome from FASTA file
   length_of_genome <- length(fasta[[1]])
@@ -394,11 +385,11 @@ search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_sRNA_user, min_
     # Setting threshold of gap between transcripts
     if(is.null(threshold_gap_transcripts_user)){
       if(coverage_signal < 10){
-        threshold_gap_transcripts <- 150
-      }else if(coverage_signal > 100){
         threshold_gap_transcripts <- 50
+      }else if(coverage_signal > 100){
+        threshold_gap_transcripts <- 20
       }else{
-        threshold_gap_transcripts <- ((-(10/9)*coverage_signal)+(1450/9))
+        threshold_gap_transcripts <- ((-(1/3)*coverage_signal)+(160/3))
       }
     }else{
       threshold_gap_transcripts <- threshold_gap_transcripts_user
@@ -406,7 +397,7 @@ search_sRNA <- function(bamfiles, gff, fasta, threshold_coverage_sRNA_user, min_
     
     # Setting threshold of minimum coverage of final sRNA
     if(is.null(threshold_coverage_sRNA_user)){
-      threshold_coverage_sRNA <- Inf
+      threshold_coverage_sRNA <- 0
     }else{
       threshold_coverage_sRNA <- threshold_coverage_sRNA_user
     }
