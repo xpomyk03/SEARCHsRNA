@@ -26,6 +26,9 @@ readBAM <- function(bamFile){
 
 
 get_annotation <- function(gff){
+  ###Function for getting position of genes for positive and negative strand from GFF3
+  ##INPUT: gff <- loaded GFF3
+  
   # Annotation of positive string
   genes_start_positive <- c(); genes_start_positive <- gff[,4]; genes_start_positive <- genes_start_positive[(gff[,3] == 'gene') & (gff[,7] == '+')];
   genes_end_positive <- c(); genes_end_positive <- gff[,5]; genes_end_positive <- genes_end_positive[(gff[,3] == 'gene') & (gff[,7] == '+')];
@@ -39,6 +42,11 @@ get_annotation <- function(gff){
 
 
 preparing_signals_from_reads <- function(length_of_genome, filename, type_of_data){
+  ###Function used to create a coverage signal from BAM file
+  ##INPUT: length_of_genome <- length of genome from FASTA file
+  #        filename <- name of BAM file
+  #        type_of_data <- parameter for stranded ('Stranded') of reversly stranded ('ReverslyStranded') data
+  
   # Load the BAM file
   BAM <- readBAM(filename)
   
@@ -92,6 +100,13 @@ preparing_signals_from_reads <- function(length_of_genome, filename, type_of_dat
 }
 
 search_transcripts <- function(signal, length_of_genome, annotation_genes_start, annotation_genes_end, coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA){
+  ###Function used to create a coverage signal from BAM file
+  ##INPUT: signal <- coverage signal for one strand from BAM file
+  #        length_of_genome <- length of genome from FASTA file
+  #        annotation_genes_start, annotation_genes_end <- vectors of positions of annotated genes from GFF3 for same strand like input coverage signal
+  #        type_of_data <- mean coverage obtained from coverage signals/2
+  #        threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA <- parameters of detection
+  
   ## Searching for 5' and 3' potential ends of transcripts
   # 5' ends
   position_start <- rep(0, length_of_genome)
@@ -209,7 +224,7 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
   
   rm(list = c('pamet', 'index_of_end', 'index_of_start_1', 'index_of_start_2', 'position_start_end'))
   
-  # Extension of 3' and 5' ends in both directions
+  # Extension of 3' and 5' ends in both directions by given paraeter threshold_coverage_min
   start_index <- c()
   end_index <- c()
   

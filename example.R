@@ -1,13 +1,14 @@
+# Example script for running SEARCHsRNA tool
 # Uploading of packages
 library(Rsamtools)
 library(seqinr)
 library(dplyr)
 
 # Loading all necessary functions for SEARCHsRNA tool
-source('~/DP_sRNA_searching/functions.R')
+source('~/SEARCHsRNA/functions.R')
 
-# Setting the path to the folder containing the data
-path_of_files <- '~/DP_sRNA_searching' 
+# Setting the path to the folder containing the data - BAM, FASTA, GFF3
+path_of_files <- '~/path_to_my_data' 
 
 
 #### Parameters of function search_sRNA:
@@ -23,4 +24,4 @@ path_of_files <- '~/DP_sRNA_searching'
 search_sRNA(path_of_files, type_of_data = 'Stranded', threshold_coverage_sRNA = 10, min_length_of_sRNA = 50, threshold_coverage_steepness = 5, threshold_coverage_min = 2, threshold_gap_transcripts = 50)
 
 #Example for automatic settings of parametters
-search_sRNA(path_of_files, threshold_coverage_sRNA = 10, min_length_of_sRNA = 100)
+search_sRNA(path_of_files)
