@@ -43,9 +43,10 @@ get_annotation <- function(gff){
 
 preparing_signals_from_reads <- function(length_of_genome, filename, type_of_data){
   ###Function used to create a coverage signal from BAM file
-  ##INPUT: length_of_genome <- length of genome from FASTA file
-  #        filename <- name of BAM file
-  #        type_of_data <- parameter for stranded ('Stranded') of reversly stranded ('ReverslyStranded') data
+  ##INPUT:   length_of_genome <- length of genome from FASTA file
+  #          filename <- name of BAM file
+  #          type_of_data <- parameter for stranded ('Stranded') of reversly stranded ('ReverslyStranded') data
+  ##OUTPUT:  two coverage vectors for strands in list
   
   # Load the BAM file
   BAM <- readBAM(filename)
@@ -101,11 +102,12 @@ preparing_signals_from_reads <- function(length_of_genome, filename, type_of_dat
 
 search_transcripts <- function(signal, length_of_genome, annotation_genes_start, annotation_genes_end, coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA){
   ###Function used to create a coverage signal from BAM file
-  ##INPUT: signal <- coverage signal for one strand from BAM file
-  #        length_of_genome <- length of genome from FASTA file
-  #        annotation_genes_start, annotation_genes_end <- vectors of positions of annotated genes from GFF3 for same strand like input coverage signal
-  #        type_of_data <- mean coverage obtained from coverage signals/2
-  #        threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA <- parameters of detection
+  ##INPUT:   signal <- coverage signal for one strand from BAM file
+  #          length_of_genome <- length of genome from FASTA file
+  #          annotation_genes_start, annotation_genes_end <- vectors of positions of annotated genes from GFF3 for same strand like input coverage signal
+  #          type_of_data <- mean coverage obtained from coverage signals/2
+  #          threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA <- parameters of detection
+  ##OUTPUT:  list of potential sRNA
   
   ## Searching for 5' and 3' potential ends of transcripts
   # 5' ends
@@ -332,13 +334,15 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
 
 
 search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_coverage_sRNA = 0, min_length_of_sRNA = 40, threshold_coverage_steepness = NULL, threshold_coverage_min = NULL, threshold_gap_transcripts = NULL){
-  #### Parameters of function search_sRNA:
-  # type_of_data:                           'Stranded' for stranded BAM data/ 'ReverslyStranded' for Reversly stranded BAM data [default: 'Stranded']
-  # threshold_coverage_sRNA                  Set this value [] as the minimum coverage requirement of the resulting sRNAs [default: 0]
-  # min_length_of_sRNA                       Set this value [pb] as the minimum length requirement of the resulting sRNAs [default: 40]
-  # threshold_coverage_steepness             Set this value [number of reads] to set the value to detect changes in coverage and find transcripts (a higher value searches only for transcripts with high steepness coverage between  the 5'/3' ends and introns) [default: NULL]
-  # threshold_coverage_min                   Set this value [number of minimal alignment reads] to set the value of minimum coverage for 3' and 5' ends (a higher value searches only the 5' and 3' ends with higher coverage) [default: NULL]
-  # threshold_gap_transcripts                Set this value [pb] to determine the minimum gap that is allowed between 2 transcripts (if the gap is smaller, the transcripts will be joined together) [default: NULL]
+  ###Function used to create a coverage signal from BAM file
+  ##INPUT:   path_of_files <- path to folder with BAM, FASTA and GFF3 files
+  #          type_of_data <- 'Stranded' for stranded BAM data/ 'ReverslyStranded' for Reversly stranded BAM data [default: 'Stranded'] 
+  #          threshold_coverage_sRNA  <- Set this value [] as the minimum coverage requirement of the resulting sRNAs [default: 0]
+  #          min_length_of_sRNA <- Set this value [pb] as the minimum length requirement of the resulting sRNAs [default: 40]
+  #          threshold_coverage_steepness <- Set this value [number of reads] to set the value to detect changes in coverage and find transcripts (a higher value searches only for transcripts with high steepness coverage between  the 5'/3' ends and introns) [default: NULL] [Recommended: 2-10]
+  #          threshold_coverage_min <- Set this value [number of minimal alignment reads] to set the value of minimum coverage for 3' and 5' ends (a higher value searches only the 5' and 3' ends with higher coverage) [default: NULL] [Recommended: 2-5]
+  #          threshold_gap_transcripts <- Set this value [pb] to determine the minimum gap that is allowed between 2 transcripts (if the gap is smaller, the transcripts will be joined together) [default: NULL]
+  ##OUTPUT:  ---
   
   setwd(path_of_files)
   
@@ -429,6 +433,13 @@ search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_cove
 }
 
 exporting_signals_TXT <- function(filename, name_strand, length_of_genome, transcripts){
+  ###Function used to export TXT file
+  ##INPUT:   filename <- name of BAM file [str]
+  #          name_strand <- name of strand ('_positive'/'_negative')
+  #          length_of_genome <- length of genome [int]
+  #          transcripts <- list of predicted sRNA transcripts
+  ##OUTPUT:  TXT file
+  
   
   transkript_signal <- rep(0, length_of_genome)
   
@@ -443,6 +454,14 @@ exporting_signals_TXT <- function(filename, name_strand, length_of_genome, trans
 }
 
 exporting_CSV <- function(filename, gff, positive_transcripts, negative_transcripts){
+  ###Function used to export CSV file
+  ##INPUT:   filename <- name of BAM file [str]
+  #          gff <- loaded GFF3
+  #          length_of_genome <- length of genome [int]
+  #          positive_transcripts <- list of predicted sRNA transcripts from positive strand
+  #          negative_transcripts <- list of predicted sRNA transcripts from negative strand
+  ##OUTPUT:  TXT file
+  
   start_index_positive <- positive_transcripts[["start_index"]]
   end_index_positive <- positive_transcripts[["end_index"]]
   length_of_transcripts_positive <- positive_transcripts[["length_of_transcripts"]]
