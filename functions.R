@@ -316,14 +316,14 @@ search_transcripts <- function(signal, length_of_genome, annotation_genes_start,
 }
 
 
-search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_coverage_sRNA_user = NULL, min_length_of_sRNA_user = NULL, threshold_coverage_steepness_user = NULL, threshold_coverage_min_user = NULL, threshold_gap_transcripts_user = NULL){
+search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_coverage_sRNA = 0, min_length_of_sRNA = 40, threshold_coverage_steepness = NULL, threshold_coverage_min = NULL, threshold_gap_transcripts = NULL){
   #### Parameters of function search_sRNA:
-  # type_of_data:                           'Stranded' for stranded BAM data/ 'ReverslyStranded' for Reversly stranded BAM data
-  # threshold_coverage_sRNA_user             Set this value [] as the minimum coverage requirement of the resulting sRNAs
-  # min_length_of_sRNA_user                  Set this value [pb] as the minimum length requirement of the resulting sRNAs
-  # threshold_coverage_steepness_user        NULL #Set this value [number of reads] to set the value to detect changes in coverage and find transcripts (a higher value searches only for transcripts with high steepness coverage between  the 5'/3' ends and introns)
-  # threshold_coverage_min_user              Set this value [number of minimal alignment reads] to set the value of minimum coverage for 3' and 5' ends (a higher value searches only the 5' and 3' ends with higher coverage)
-  # threshold_gap_transcripts_user           Set this value [pb] to determine the minimum gap that is allowed between 2 transcripts (if the gap is smaller, the transcripts will be joined together)
+  # type_of_data:                           'Stranded' for stranded BAM data/ 'ReverslyStranded' for Reversly stranded BAM data [default: 'Stranded']
+  # threshold_coverage_sRNA                  Set this value [] as the minimum coverage requirement of the resulting sRNAs [default: 0]
+  # min_length_of_sRNA                       Set this value [pb] as the minimum length requirement of the resulting sRNAs [default: 40]
+  # threshold_coverage_steepness             Set this value [number of reads] to set the value to detect changes in coverage and find transcripts (a higher value searches only for transcripts with high steepness coverage between  the 5'/3' ends and introns) [default: NULL]
+  # threshold_coverage_min                   Set this value [number of minimal alignment reads] to set the value of minimum coverage for 3' and 5' ends (a higher value searches only the 5' and 3' ends with higher coverage) [default: NULL]
+  # threshold_gap_transcripts                Set this value [pb] to determine the minimum gap that is allowed between 2 transcripts (if the gap is smaller, the transcripts will be joined together) [default: NULL]
   
   setwd(path_of_files)
   
@@ -342,12 +342,15 @@ search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_cove
   # Get positions of annoted genes from annotation FASTA file
   annotation_genes <- get_annotation(gff)
   
+  # For auto/manual parametters
+  threshold_coverage_steepness_user <- threshold_coverage_steepness
+  threshold_coverage_min_user <- threshold_coverage_min
+  threshold_gap_transcripts_user <- threshold_gap_transcripts
+  
   # For-cycle for all BAM files
   for (i in 1:length(bamfiles)){
-    filename <- bamfiles[i]
-    
     # Get reads from BAM
-    signals <- preparing_signals_from_reads(length_of_genome, filename, type_of_data)
+    signals <- preparing_signals_from_reads(length_of_genome, bamfiles[i], type_of_data)
     
     signal_positive <- signals[["signal_positive"]]
     signal_negative <- signals[["signal_negative"]]
@@ -395,19 +398,6 @@ search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_cove
       threshold_gap_transcripts <- threshold_gap_transcripts_user
     }
     
-    # Setting threshold of minimum coverage of final sRNA
-    if(is.null(threshold_coverage_sRNA_user)){
-      threshold_coverage_sRNA <- 0
-    }else{
-      threshold_coverage_sRNA <- threshold_coverage_sRNA_user
-    }
-    
-    # Setting threshold of minimum length of final sRNA
-    if(is.null(min_length_of_sRNA_user)){
-      min_length_of_sRNA <- 40
-    }else{
-      min_length_of_sRNA <- min_length_of_sRNA_user
-    }
     
     # Searching for sRNA transcripts on positive strand
     positive_transcripts <- search_transcripts(signal_positive, length_of_genome, annotation_genes[["genes_start_positive"]], annotation_genes[["genes_end_positive"]], coverage_signal, threshold_coverage_min, threshold_coverage_steepness, threshold_gap_transcripts, min_length_of_sRNA, threshold_coverage_sRNA)
@@ -417,9 +407,9 @@ search_sRNA <- function(path_of_files, type_of_data = 'Stranded', threshold_cove
     
     # Exporting the results to CSV 
     
-    exporting_signals_TXT(filename, '_positive_sRNA.txt', length_of_genome, positive_transcripts)
-    exporting_signals_TXT(filename, '_negative_sRNA.txt', length_of_genome, negative_transcripts)
-    exporting_CSV(filename, gff, positive_transcripts, negative_transcripts)
+    exporting_signals_TXT(bamfiles[i], '_positive_sRNA.txt', length_of_genome, positive_transcripts)
+    exporting_signals_TXT(bamfiles[i], '_negative_sRNA.txt', length_of_genome, negative_transcripts)
+    exporting_CSV(bamfiles[i], gff, positive_transcripts, negative_transcripts)
     }
 }
 
